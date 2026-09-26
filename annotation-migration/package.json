@@ -1,0 +1,16 @@
+{
+  "name": "annotation-migration",
+  "version": "1.0.0",
+  "description": "单机文稿批注迁移工具：旧稿框选批注，新稿按文本与上下文重新定位",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

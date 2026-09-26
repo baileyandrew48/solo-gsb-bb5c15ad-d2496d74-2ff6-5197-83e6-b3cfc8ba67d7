@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>文稿批注迁移工具</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">📝 文稿批注迁移工具</div>
+    <div class="proj-bar">
+      <label>项目：
+        <select id="projectSelect" title="选择已有项目"></select>
+      </label>
+      <button id="newProjectBtn" type="button">新建项目</button>
+      <button id="deleteProjectBtn" type="button" class="danger ghost" title="删除当前项目">删除</button>
+    </div>
+    <div id="saveStatus" class="save-status">—</div>
+  </header>
+
+  <!-- 起始页：项目列表 -->
+  <section id="startScreen" class="start-screen">
+    <div class="start-card">
+      <h1>文稿批注迁移工具</h1>
+      <p class="muted">单机运行 · 数据保存在服务器 <code>data/</code> 目录 · 校对人员专用</p>
+      <div class="new-proj-row">
+        <input id="startTitle" type="text" maxlength="200" placeholder="输入项目名称，如：第三版社论校对" />
+        <button id="startCreateBtn" type="button" class="primary">创建并开始</button>
+      </div>
+      <h2>已有项目</h2>
+      <table id="projectTable" class="project-table">
+        <thead>
+          <tr><th>项目名称</th><th>批注数</th><th>待处理</th><th>更新时间</th><th></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <p id="emptyProjects" class="muted hidden">暂无项目，请先创建。</p>
+    </div>
+  </section>
+
+  <!-- 工作区 -->
+  <main id="workspace" class="workspace hidden">
+    <nav class="tabs">
+      <button class="tab active" data-tab="old" type="button">1. 旧稿 · 框选批注</button>
+      <button class="tab" data-tab="new" type="button">2. 新稿 · 定位与核对</button>
+    </nav>
+
+    <!-- Tab 1: 旧稿 -->
+    <section id="tab-old" class="tab-panel active">
+      <div class="pane-grid">
+        <div class="pane">
+          <div class="pane-head">
+            <h3>旧版文稿</h3>
+            <div id="oldTextActions" class="pane-actions">
+              <button id="showOldPasteBtn" type="button" class="ghost">更换文稿</button>
+            </div>
+          </div>
+          <div id="oldPasteBox" class="paste-box hidden">
+            <p class="warn">⚠️ 更换旧稿将清空该项目全部批注与定位结果，请确认。</p>
+            <textarea id="oldPasteArea" placeholder="在此粘贴旧版文稿全文……" spellcheck="false"></textarea>
+            <div class="btn-row">
+              <button id="loadOldBtn" type="button" class="primary">载入旧稿</button>
+              <button id="cancelOldPasteBtn" type="button" class="ghost">取消</button>
+            </div>
+          </div>
+          <div id="oldTextView" class="text-view" aria-label="旧稿正文，可框选文字添加批注"></div>
+          <div id="oldEmptyHint" class="empty-hint">
+            <p>还没有旧稿。请粘贴旧版文稿：</p>
+            <textarea id="oldFirstPaste" placeholder="在此粘贴旧版文稿全文……" spellcheck="false"></textarea>
+            <button id="firstLoadOldBtn" type="button" class="primary">载入旧稿并开始批注</button>
+          </div>
+        </div>
+        <div class="pane side">
+          <div class="pane-head"><h3>旧稿批注 <span id="oldCount" class="count-badge">0</span></h3></div>
+          <div id="oldAnnotationList" class="card-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 2: 新稿 -->
+    <section id="tab-new" class="tab-panel">
+      <div id="newPastePane" class="paste-pane">
+        <h2>粘贴新版文稿</h2>
+        <p class="muted">系统将根据每条批注的选中文本及其前后文，在新版中重新定位。重复片段会比较上下文；原文被删或存在多个合理位置时标记为「待处理」，不会自动挂到错误段落。</p>
+        <textarea id="newPasteArea" placeholder="在此粘贴新版文稿全文……" spellcheck="false"></textarea>
+        <div class="btn-row">
+          <button id="migrateBtn" type="button" class="primary">粘贴并执行迁移定位</button>
+        </div>
+      </div>
+
+      <div id="migratePane" class="pane-grid hidden">
+        <div class="pane">
+          <div class="pane-head">
+            <h3>新版文稿</h3>
+            <div class="legend">
+              <span class="lg located">已定位</span>
+              <span class="lg manual">人工确认</span>
+              <span class="lg pending">待处理</span>
+            </div>
+            <div class="pane-actions">
+              <button id="changeNewBtn" type="button" class="ghost">更换新稿</button>
+              <button id="remigrateBtn" type="button" class="ghost">全部重新定位</button>
+            </div>
+          </div>
+          <div id="pickBanner" class="pick-banner hidden">
+            <span>✂️ 定位模式：请在左侧新稿中框选批注应处的文字（框选后无需其他操作，坐标已记录），然后点「确认位置」。</span>
+            <button id="pickConfirmBtn" type="button" class="primary small" onmousedown="event.preventDefault()">确认位置</button>
+            <button id="pickCancelBtn" type="button" class="ghost small">取消</button>
+          </div>
+          <div id="newTextView" class="text-view" aria-label="新稿正文与定位高亮"></div>
+        </div>
+        <div class="pane side">
+          <div class="pane-head">
+            <h3>定位结果</h3>
+            <div class="filters">
+              <label><input type="checkbox" id="filterPending" checked /> 只看待处理</label>
+            </div>
+          </div>
+          <div id="resultSummary" class="summary"></div>
+          <div id="resultList" class="card-list"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 旧稿选区弹层 -->
+  <div id="selPopup" class="sel-popup hidden">
+    <textarea id="selNote" rows="3" placeholder="批注内容（可留空）"></textarea>
+    <input id="selAuthor" type="text" maxlength="100" placeholder="校对人（可留空）" />
+    <div class="btn-row">
+      <button id="selConfirm" type="button" class="primary small">添加批注</button>
+      <button id="selCancel" type="button" class="ghost small">取消</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

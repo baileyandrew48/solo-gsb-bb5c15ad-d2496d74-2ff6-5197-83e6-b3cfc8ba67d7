@@ -1,0 +1,13 @@
+services:
+  annotation-migration:
+    build: .
+    image: annotation-migration:latest
+    container_name: annotation-migration
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - PORT=3000
+      - DATA_DIR=/app/data
